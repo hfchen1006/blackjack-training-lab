@@ -1,0 +1,37 @@
+.app-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: clamp(1rem, 5vw, 4rem);
+}
+
+.project-placeholder {
+  width: 100%;
+  max-width: 42rem;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid #3e564b;
+  border-radius: 1rem;
+  background: #192b23;
+}
+
+.development-status {
+  margin: 0 0 1.25rem;
+  color: #b4d8c4;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 3.5rem);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.project-description {
+  margin: 1.5rem 0 0;
+  color: #c5d2ca;
+  font-size: 1.125rem;
+  line-height: 1.6;
+}

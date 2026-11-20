@@ -1,0 +1,10 @@
+# Generated dependencies and build artifacts (for future frontend setup)
+node_modules/
+dist/
+.astro/
+coverage/
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db

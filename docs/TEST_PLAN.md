@@ -1,46 +1,54 @@
-# Phase 1 Acceptance Test Outline (Draft)
+# Phase 1 Acceptance & QA Plan — Alpha Status
 
-The cases below define future validation work. **None of these tests has been run.**
+Last synchronized: **2026-11-20**, source `feature/phase1c-training-system`.
 
-## Rule engine
+**Evidence scope:** Codex reported **412 passing Vitest tests across 20 files** at Phase 1C.4. Deployment preparation reported **21 targeted UI tests**, build/lint and desktop/320–390px Chromium touch emulation, including six completed 25-question runs. The maintainer opened the live site on a phone. These are historical checkpoint results; **no tests are re-run by this document update**. Comprehensive iOS Safari / Android acceptance remains open.
 
-- Compare Basic Strategy cases against independently maintained reference results for selected profile, including all Hard, Soft and Pair upcards.
-- Validate actions available before and after Hit; test Double fallback behavior and split restrictions.
-- Verify no standard player decisions are requested after bust, natural finalization, or another terminal state.
-- Verify dealer Ace insurance offer occurs before peek, no non-Ace offers, and no accidental leakage of hidden dealer card.
-- Verify no-count Insurance recommendation is to decline; if Even Money added, test its distinct presentation.
-- Test malformed hand states and impossible card counts fail closed.
+## Rule engine and strategy — Implemented/tested
 
-## Generator and reproducibility
+- Independent S17/DAS Hard, Soft and exact-rank Pair reference fixture; legality, Double/Split fallback and terminal-state rejection.
+- Multiple Aces, split limits, dealer peek and unsupported input handling.
+- Insurance/Even Money **underlying domain tests**; their standalone prompts are not present in the Alpha UI, and that absence is intentional.
+- Revalidate profile-dependent cases if provisional rules become configurable; preserve already-approved core.
 
-- On a known seed + generator version + rules + setup, generate the same prompt descriptors in repeated sessions and on independent browsers.
-- Changing UI language must not change prompt order.
-- Balanced category counts must match the published distribution; Realistic aggregated frequencies should pass broad tolerance checks for finite-deck sampling without fabricating exact odds.
-- Continuing prompts must have at least one legal prior Hit sequence and no already-ended state.
-- Replay stale/unknown seed/profile versions must show an error rather than silently change the questions.
+## Generator and distribution — Implemented/tested
 
-## Timing
+- Same seed/index/profile/algorithm versions reproduce question descriptors; UI language and total visibility do not reshuffle an active session.
+- Balanced 25/50/100 category counts differ by no more than one; exact-rank Pair precedence; reachable Continuing/Split; bounded candidate failure and one deterministic extended retry.
+- Realistic: natural initial two-card decisions, fresh six-deck shoe per question, no quotas, no non-actionable natural/dealer Blackjack rounds.
+- Independent six-deck enumeration and a 12,000-question sample documented in `TRAINING_DISTRIBUTIONS.md`.
+- Future Challenge Link must validate stale or unknown generator/distribution/rule versions and reproduce ordered descriptors across devices.
 
-- Time starts when cards become visible and ends on first valid action.
-- Key autorepeat and rapid double clicks cause at most one answer.
-- Pause, tab switch, app background, and resume exclude background time; paused cards are hidden.
-- Report median and P90 recomputed from stored event durations match displayed values.
+## Training UI and timing — Implemented/tested; real-device QA partial
 
-## UI and multilingual
+- Practice: immediate answer locking, correctness feedback, explanation, Next.
+- Speed Run: 25/50/100, end-only feedback, pause/resume, correct timing, All/Incorrect/Correct filters, Perfect Run, duplicate-submission guards.
+- Shortcuts H/S/D/P still work without small visible badge text; focus and accessibility labels preserved.
+- Pause/visibility excludes background time and hides cards. **Remaining:** check real mobile lock/unlock, backgrounding, rotation and low-end devices.
 
-- Desktop mouse/keyboard; phone portrait touch; no horizontal scrolling.
-- All labels, rule descriptions, error messages, feedback, reports, and image templates localized en-US/zh-TW.
-- Switching language mid-session preserves answers, timing state, and seed.
-- Color is not the only correct/incorrect indicator; focus order and labels remain usable.
+## Localization, touch and accessibility — Partial release acceptance
 
-## Storage and sharing
+- English/Traditional Chinese flows and current mid-session language change; hand-total toggle does not regenerate current question.
+- Chromium desktop and 320/375/390px touch-emulated browser smoke tests reportedly passed with no horizontal overflow/errors.
+- Site loads on a phone per the maintainer, but full Safari/Android behavior, screen reader/accessibility audit, text zoom and language persistence remain to be verified or implemented.
 
-- Completed history persists after reload where browser storage is available; clear-history control requires confirmation.
-- Image contains the correct numerator/denominator, time metrics, and session metadata; can download on desktop and mobile.
-- Challenge link opens in a fresh browser, restores settings, reproduces identical ordered prompt descriptors when Same Seed is used.
-- Corrupt, tampered, oversized, or unsupported link parameters cannot execute code or erase history.
-- No personal local history or emails are silently included in shareable URLs/images.
+## Phase 1D — Session history and Weakness Drill (Pending)
 
-## Acceptance gate
+- Browser-local versioned persistence for completed sessions and per-question events; safe migration and clear-history confirmation.
+- Correct restored totals and timestamps after reload; corrupt data must fail safely.
+- Per-decision-case accuracy and reaction-time distribution, median/P90; manual review and an independently scored Weakness Drill.
+- Do not silently adapt comparable Speed Runs. The current Alpha keeps records only in memory.
 
-No phase is declared complete solely on the basis of screenshots or a single manual quiz. Require strategy reference tests, deterministic generator tests, browser-level checks, and user review.
+## Phase 1E — Share and challenge (Pending)
+
+- Bilingual shareable PNG with accurate selected result metadata, nickname handling, download and native share fallback.
+- Safe Same-Seed Challenge Link restores count/distribution/rules and compatible generator/distribution versions; validates malformed, oversized, tampered and stale links.
+- Independent mobile/desktop and cross-language equivalence; no private local history or hidden tracking data in URL/image.
+- Auto-generated normal Seed with optional Advanced Settings custom Seed; **not yet implemented**.
+
+## Release and privacy gate
+
+- Public Alpha Pages workflow runs tests/lint/build and deploys `app/dist` on pushes to the approved feature branch.
+- Live URL: https://hfchen1006.github.io/blackjack-training-lab/ (phone access confirmed by maintainer).
+- Recheck a later deployment run after merge, then complete real-device, accessibility, persistence, sharing and privacy reviews before marking all of Phase 1 complete.
+- An online Alpha, a single manual demo or historical test results alone do not constitute final release acceptance.

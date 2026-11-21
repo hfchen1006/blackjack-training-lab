@@ -4,7 +4,7 @@ import { messages } from '../i18n/messages'
 import { format } from '../i18n/format'
 import { advanceSpeedRun, answerSpeedRun, pauseSpeedRun, readySpeedRun, resumeSpeedRun, retrySpeedRun, speedRunConfig, speedRunReport, startSpeedRun } from '../modules/training/speed-run'
 import type { SessionLength, SpeedRunState } from '../modules/training/speed-run'
-import type { QuestionScenario } from '../modules/training/question-generator'
+import type { Distribution } from '../modules/training/distribution'
 import type { Answer } from '../modules/training/training-flow'
 import { canExtendGeneration } from '../modules/training/training-flow'
 import { monotonicClock } from './clock'
@@ -18,7 +18,7 @@ import { Feedback } from './Feedback'
 export function SpeedRunMode({ locale, showTotal, clock = monotonicClock }: { locale: Locale; showTotal: boolean; clock?: Clock }) {
   const copy = messages[locale]
   const [seed, setSeed] = useState('training-lab')
-  const [scenario, setScenario] = useState<QuestionScenario>('initial')
+  const [distribution, setDistribution] = useState<Distribution>('balanced')
   const [count, setCount] = useState<SessionLength>(50)
   const [state, setState] = useState<SpeedRunState | null>(null)
   const [reviewFilter, setReviewFilter] = useState<'all' | 'incorrect' | 'correct'>('incorrect')
@@ -57,8 +57,8 @@ export function SpeedRunMode({ locale, showTotal, clock = monotonicClock }: { lo
   const reviewedRecords = report?.records.filter((record) => reviewFilter === 'all' || record.correct === (reviewFilter === 'correct')) ?? []
   return <section aria-label={copy.speedRun}>
     <div className="mode-heading"><h2>{copy.speedRun}</h2><p>{copy.speedIntro}</p></div>
-    {!state ? <form className="setup-form speed-setup" onSubmit={(event) => { event.preventDefault(); setReviewFilter('incorrect'); setState(startSpeedRun(speedRunConfig(seed, scenario, count))) }}>
-      <TrainingSetup locale={locale} seed={seed} scenario={scenario} onSeed={setSeed} onScenario={setScenario}>
+    {!state ? <form className="setup-form speed-setup" onSubmit={(event) => { event.preventDefault(); setReviewFilter('incorrect'); setState(startSpeedRun(speedRunConfig(seed, distribution, count))) }}>
+      <TrainingSetup locale={locale} seed={seed} distribution={distribution} onSeed={setSeed} onDistribution={setDistribution}>
         <label>{copy.sessionLength}<select value={count} onChange={(event) => setCount(Number(event.target.value) as SessionLength)}>
           {[25, 50, 100].map((value) => <option key={value} value={value}>{value}</option>)}
         </select></label>

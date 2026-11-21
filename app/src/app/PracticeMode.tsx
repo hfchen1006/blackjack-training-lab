@@ -4,7 +4,7 @@ import { messages } from '../i18n/messages'
 import { format } from '../i18n/format'
 import { answerPractice, nextPractice, retryPractice, startPractice } from '../modules/training/practice'
 import { canExtendGeneration, trainingConfig } from '../modules/training/training-flow'
-import type { QuestionScenario } from '../modules/training/question-generator'
+import type { Distribution } from '../modules/training/distribution'
 import { questionView } from './question-view'
 import { QuestionDisplay } from './QuestionDisplay'
 import { TrainingSetup } from './TrainingSetup'
@@ -14,12 +14,12 @@ import { GenerationError } from './GenerationError'
 export function PracticeMode({ locale, showTotal }: { locale: Locale; showTotal: boolean }) {
   const copy = messages[locale]
   const [seed, setSeed] = useState('training-lab')
-  const [scenario, setScenario] = useState<QuestionScenario>('initial')
+  const [distribution, setDistribution] = useState<Distribution>('balanced')
   const [state, setState] = useState(() => startPractice(trainingConfig()))
   return <section aria-label={copy.practice}>
     <div className="mode-heading"><h2>{copy.practice}</h2><p>{copy.practiceIntro}</p></div>
-    <form className="setup-form" onSubmit={(event) => { event.preventDefault(); setState(startPractice(trainingConfig(seed, scenario))) }}>
-      <TrainingSetup locale={locale} seed={seed} scenario={scenario} onSeed={setSeed} onScenario={setScenario} />
+    <form className="setup-form" onSubmit={(event) => { event.preventDefault(); setState(startPractice(trainingConfig(seed, distribution))) }}>
+      <TrainingSetup locale={locale} seed={seed} distribution={distribution} onSeed={setSeed} onDistribution={setDistribution} />
       <button type="submit">{copy.apply}</button>
     </form>
     <h3 className="question-number" aria-live="polite">{format(copy.question, { number: state.index + 1 })}</h3>

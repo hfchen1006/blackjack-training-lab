@@ -21,6 +21,7 @@ button.primary:hover:not(:disabled) { background: #ecf6e5; }
 .mode-heading { margin-block: 1.5rem; }
 .mode-heading p { color: #b7cabe; margin: 0; }
 .setup-form { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 1rem; padding: 1.25rem; background: #192f24; border-radius: .75rem; }
+.distribution-description { grid-column: 1 / -1; order: 1; margin: 0; font-size: .9rem; }
 .question-number { margin: 1.5rem 0 1rem; color: #b8d3c2; }
 .question-table { padding: clamp(1rem, 4vw, 2rem); border-radius: 1rem; background: #193b2a; border: 1px solid #43694f; }
 .hand-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }

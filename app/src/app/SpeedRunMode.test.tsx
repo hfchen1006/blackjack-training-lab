@@ -4,12 +4,19 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { SpeedRunMode } from './SpeedRunMode'
 import { messages } from '../i18n/messages'
 import { BASELINE_RULE_PROFILE } from '../modules/blackjack/rule-profile'
-import * as generator from '../modules/training/question-generator'
+import * as distribution from '../modules/training/distribution'
+import type { DistributionRequest } from '../modules/training/distribution'
 import App from './App'
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
 async function flush() { await act(async () => { await Promise.resolve() }) }
 const en = messages['en-US']
+const actualDistribution = distribution.generateDistributedQuestion
+function generatorLimit(input: DistributionRequest, attempts: number) {
+  const failure = actualDistribution({ ...input, generatorVersion: 'unsupported-test-version' })
+  if (failure.kind !== 'failure') throw new Error('Expected failure fixture')
+  return { ...failure, reason: 'attempt-limit' as const, attempts }
+}
 
 describe('Speed Run checkpoint B', () => {
   it('offers all lengths, withholds answers, completes a timed run, reviews records, and restarts', async () => {
@@ -19,14 +26,15 @@ describe('Speed Run checkpoint B', () => {
     render(<SpeedRunMode locale="en-US" showTotal={false} clock={clock} />)
     expect((screen.getByLabelText(en.sessionLength) as HTMLSelectElement).value).toBe('50')
     expect(within(screen.getByLabelText(en.sessionLength)).getAllByRole('option').map((option) => option.textContent)).toEqual(['25', '50', '100'])
-    expect((screen.getByLabelText(en.scenario) as HTMLSelectElement).value).toBe('initial')
+    expect((screen.getByLabelText(en.distribution) as HTMLSelectElement).value).toBe('balanced')
     fireEvent.change(screen.getByLabelText(en.sessionLength), { target: { value: '25' } })
     fireEvent.click(screen.getByRole('button', { name: en.startRun }))
     await flush()
+    expect(screen.queryByLabelText(en.distribution)).toBeNull()
     const firstId = document.querySelector('.question-table')?.getAttribute('data-question-id')
     expect(document.querySelector('.answer-controls kbd')).toBeNull()
     for (let index = 0; index < 25; index += 1) {
-      const result = generator.generateQuestion({ seed: 'training-lab', scenario: 'initial', questionIndex: index, profile: BASELINE_RULE_PROFILE })
+      const result = distribution.generateDistributedQuestion({ seed: 'training-lab', distribution: 'balanced', questionIndex: index, profile: BASELINE_RULE_PROFILE })
       if (result.kind !== 'generated') throw new Error('Expected fixture')
       const selected = index === 0 ? result.question.selectableAnswers.find((answer) => answer !== result.answerKey.decision.action)! : result.answerKey.decision.action
       now += 100
@@ -90,10 +98,10 @@ describe('Speed Run checkpoint B', () => {
 
   it('keeps generation errors on the same unanswered index and retries without skipping', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
-    const actual = generator.generateQuestion
+    const actual = distribution.generateDistributedQuestion
     let fail = true
-    const spy = vi.spyOn(generator, 'generateQuestion').mockImplementation((request) => request.questionIndex === 1 && fail
-      ? { kind: 'failure', generatorVersion: generator.QUESTION_GENERATOR_VERSION, reason: 'attempt-limit', attempts: 2048, lastRejection: null }
+    const spy = vi.spyOn(distribution, 'generateDistributedQuestion').mockImplementation((request) => request.questionIndex === 1 && fail
+      ? generatorLimit(request, 2048)
       : actual(request))
     render(<SpeedRunMode locale="en-US" showTotal={false} />)
     fireEvent.click(screen.getByRole('button', { name: en.startRun }))
@@ -113,9 +121,9 @@ describe('Speed Run checkpoint B', () => {
 
   it('preserves completed answers through exhausted recovery and can end without a false report', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
-    const actual = generator.generateQuestion
-    const spy = vi.spyOn(generator, 'generateQuestion').mockImplementation((input) => input.questionIndex === 1
-      ? { kind: 'failure', generatorVersion: generator.QUESTION_GENERATOR_VERSION, reason: 'attempt-limit', attempts: input.maxAttempts!, lastRejection: null }
+    const actual = distribution.generateDistributedQuestion
+    const spy = vi.spyOn(distribution, 'generateDistributedQuestion').mockImplementation((input) => input.questionIndex === 1
+      ? generatorLimit(input, input.maxAttempts!)
       : actual(input))
     render(<SpeedRunMode locale="en-US" showTotal={false} />)
     fireEvent.click(screen.getByRole('button', { name: en.startRun }))
@@ -133,19 +141,20 @@ describe('Speed Run checkpoint B', () => {
     expect(screen.queryByRole('region', { name: en.results })).toBeNull()
   })
 
-  it('renders ordinary continuing decisions and a perfect result in Traditional Chinese', async () => {
+  it('renders Realistic initial decisions and a perfect result in Traditional Chinese', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     const copy = messages['zh-TW']
     render(<SpeedRunMode locale="zh-TW" showTotal={false} />)
-    expect(within(screen.getByLabelText(copy.scenario)).getAllByRole('option').map((option) => option.getAttribute('value')))
-      .toEqual(['initial', 'continuing', 'split'])
-    fireEvent.change(screen.getByLabelText(copy.scenario), { target: { value: 'continuing' } })
+    expect(within(screen.getByLabelText(copy.distribution)).getAllByRole('option').map((option) => option.getAttribute('value')))
+      .toEqual(['balanced', 'realistic'])
+    fireEvent.change(screen.getByLabelText(copy.distribution), { target: { value: 'realistic' } })
+    expect(screen.getByText(copy.distributionDescriptions.realistic)).toBeTruthy()
     fireEvent.change(screen.getByLabelText(copy.sessionLength), { target: { value: '25' } })
     fireEvent.click(screen.getByRole('button', { name: copy.startRun }))
     await flush()
     for (let index = 0; index < 25; index += 1) {
       const choices = screen.getByRole('group', { name: copy.choices })
-      const current = generator.generateQuestion({ seed: 'training-lab', questionIndex: index, scenario: 'continuing', profile: BASELINE_RULE_PROFILE })
+      const current = distribution.generateDistributedQuestion({ seed: 'training-lab', questionIndex: index, distribution: 'realistic', profile: BASELINE_RULE_PROFILE })
       if (current.kind !== 'generated') throw new Error('Expected fixture')
       expect(within(choices).queryByRole('button', { name: copy.actions['take-insurance'] })).toBeNull()
       fireEvent.click(within(choices).getByRole('button', { name: copy.actions[current.answerKey.decision.action] }))
@@ -161,15 +170,15 @@ describe('Speed Run checkpoint B', () => {
     expect(report.textContent).toContain(copy.referenceAnswer)
   })
 
-  it('starts each remaining primary scenario through the same Speed Run setup', async () => {
+  it('starts both distributions through the shared Speed Run setup', async () => {
     render(<SpeedRunMode locale="en-US" showTotal={false} />)
-    for (const scenario of ['initial', 'continuing', 'split'] as const) {
-      expect(within(screen.getByLabelText(en.scenario)).getAllByRole('option').map((option) => option.getAttribute('value')))
-        .toEqual(['initial', 'continuing', 'split'])
-      fireEvent.change(screen.getByLabelText(en.scenario), { target: { value: scenario } })
+    for (const mode of ['balanced', 'realistic'] as const) {
+      expect(within(screen.getByLabelText(en.distribution)).getAllByRole('option').map((option) => option.getAttribute('value')))
+        .toEqual(['balanced', 'realistic'])
+      fireEvent.change(screen.getByLabelText(en.distribution), { target: { value: mode } })
       fireEvent.click(screen.getByRole('button', { name: en.startRun }))
       await flush()
-      const current = generator.generateQuestion({ seed: 'training-lab', questionIndex: 0, scenario, profile: BASELINE_RULE_PROFILE })
+      const current = distribution.generateDistributedQuestion({ seed: 'training-lab', questionIndex: 0, distribution: mode, profile: BASELINE_RULE_PROFILE })
       if (current.kind !== 'generated') throw new Error('Expected fixture')
       expect(document.querySelector('.question-table')?.getAttribute('data-question-id')).toBe(current.question.id)
       fireEvent.click(screen.getByRole('button', { name: en.endRun }))

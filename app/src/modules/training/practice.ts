@@ -1,11 +1,10 @@
 import { assessAnswer, canExtendGeneration, DEFAULT_ATTEMPTS, EXTENDED_ATTEMPTS, loadQuestion } from './training-flow'
-import type { Answer, AnswerFeedback, GenerationBudget, TrainingConfig } from './training-flow'
-import type { QuestionGenerationResult } from './question-generator'
+import type { Answer, AnswerFeedback, GenerationBudget, QuestionLoadResult, TrainingConfig } from './training-flow'
 
 export type PracticeState = {
   readonly config: TrainingConfig
   readonly index: number
-  readonly current: QuestionGenerationResult
+  readonly current: QuestionLoadResult
   readonly feedback: AnswerFeedback | null
   readonly attemptBudget: GenerationBudget
 }

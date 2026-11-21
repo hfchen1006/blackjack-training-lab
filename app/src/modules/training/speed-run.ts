@@ -1,6 +1,5 @@
 import { assessAnswer, canExtendGeneration, DEFAULT_ATTEMPTS, EXTENDED_ATTEMPTS, loadQuestion, trainingConfig } from './training-flow'
-import type { Answer, AnswerFeedback, GenerationBudget, TrainingConfig } from './training-flow'
-import type { QuestionGenerationResult, QuestionScenario } from './question-generator'
+import type { Answer, AnswerFeedback, GenerationBudget, QuestionLoadResult, TrainingConfig, TrainingSelection } from './training-flow'
 
 export type SessionLength = 25 | 50 | 100
 export type SpeedRunConfig = TrainingConfig & { readonly questionCount: SessionLength }
@@ -11,7 +10,7 @@ export type SpeedRunState = {
   readonly phase: RunningPhase | 'paused' | 'error' | 'complete'
   readonly resumePhase: RunningPhase
   readonly index: number
-  readonly current: QuestionGenerationResult
+  readonly current: QuestionLoadResult
   readonly attemptBudget: GenerationBudget
   readonly records: readonly AnswerRecord[]
   readonly questionStartedAt: number | null
@@ -20,8 +19,8 @@ export type SpeedRunState = {
   readonly lastTimestamp: number | null
 }
 
-export function speedRunConfig(seed = 'training-lab', scenario: QuestionScenario = 'initial', questionCount: SessionLength = 50): SpeedRunConfig {
-  return { ...trainingConfig(seed, scenario), questionCount }
+export function speedRunConfig(seed = 'training-lab', selection: TrainingSelection = 'balanced', questionCount: SessionLength = 50): SpeedRunConfig {
+  return { ...trainingConfig(seed, selection), questionCount }
 }
 
 export function startSpeedRun(config = speedRunConfig()): SpeedRunState {

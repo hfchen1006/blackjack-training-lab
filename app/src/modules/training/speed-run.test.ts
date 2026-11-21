@@ -5,8 +5,8 @@ import * as generator from './question-generator'
 afterEach(() => vi.restoreAllMocks())
 
 describe('pure Speed Run transitions', () => {
-  it('defaults to 50 initial questions with a structured scenario selection', () => {
-    expect(speedRunConfig()).toMatchObject({ questionCount: 50, selection: { kind: 'scenario', scenario: 'initial' } })
+  it('defaults to 50 Balanced questions with a versioned distribution selection', () => {
+    expect(speedRunConfig()).toMatchObject({ questionCount: 50, selection: { kind: 'distribution', distribution: 'balanced', version: 'training-distribution-v1' } })
     const state = startSpeedRun()
     expect(state).toMatchObject({ phase: 'ready', index: 0, records: [], questionStartedAt: null })
     expect(speedRunReport(state)).toBeNull()

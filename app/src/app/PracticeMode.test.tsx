@@ -7,11 +7,17 @@ import { BASELINE_RULE_PROFILE } from '../modules/blackjack/rule-profile'
 import { messages } from '../i18n/messages'
 import { QuestionDisplay } from './QuestionDisplay'
 import { questionView } from './question-view'
+import * as distribution from '../modules/training/distribution'
+import type { TrainingSelection } from '../modules/training/training-flow'
+import { assessAnswer } from '../modules/training/training-flow'
+import { Feedback } from './Feedback'
 
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 const copy = messages['en-US']
-function expected(scenario: generator.QuestionScenario = 'initial', seed = 'training-lab', questionIndex = 0) {
-  const result = generator.generateQuestion({ seed, questionIndex, scenario, profile: BASELINE_RULE_PROFILE })
+function expected(selection: TrainingSelection = 'balanced', seed = 'training-lab', questionIndex = 0) {
+  const result = selection === 'balanced' || selection === 'realistic'
+    ? distribution.generateDistributedQuestion({ seed, questionIndex, distribution: selection, profile: BASELINE_RULE_PROFILE })
+    : generator.generateQuestion({ seed, questionIndex, scenario: selection, profile: BASELINE_RULE_PROFILE })
   if (result.kind !== 'generated') throw new Error('Fixture generation failed')
   return result
 }
@@ -55,20 +61,24 @@ describe('Practice checkpoint A', () => {
     expect(within(choices).getAllByRole('button').every((button) => button.hasAttribute('disabled'))).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: copy.next }))
     expect(screen.queryByRole('status')).toBeNull()
-    expect(document.querySelector('.question-table')?.getAttribute('data-question-id')).toBe(expected('initial', 'training-lab', 1).question.id)
+    expect(document.querySelector('.question-table')?.getAttribute('data-question-id')).toBe(expected('balanced', 'training-lab', 1).question.id)
   })
 
-  it('reports an incorrect legal choice and a meaningful fallback explanation', () => {
+  it('reports an incorrect legal choice and a meaningful strategy explanation', () => {
     render(<App locale="en-US" />)
     fireEvent.change(screen.getByLabelText(copy.seed), { target: { value: 'ui-22' } })
-    fireEvent.change(screen.getByLabelText(copy.scenario), { target: { value: 'continuing' } })
     fireEvent.click(screen.getByRole('button', { name: copy.apply }))
-    const current = expected('continuing', 'ui-22')
+    const current = expected('balanced', 'ui-22')
     const wrong = current.question.selectableAnswers.find((answer) => answer !== current.answerKey.decision.action)!
     fireEvent.click(screen.getByRole('button', { name: copy.actions[wrong] }))
     expect(screen.getByRole('status').textContent).toContain(copy.incorrect)
     expect(screen.getByRole('status').textContent).toContain(copy.actions[current.answerKey.decision.action])
     expect(screen.getByRole('status').textContent).toContain('S17 reference')
+  })
+
+  it('preserves fallback explanations for supplementary continuing questions', () => {
+    const current = expected('continuing', 'ui-22')
+    render(<Feedback feedback={assessAnswer(current, 'hit')!} locale="en-US" />)
     expect(screen.getByRole('status').textContent).toContain('Double is unavailable')
     expect(screen.getByRole('status').textContent).toContain('Stand')
   })
@@ -85,26 +95,32 @@ describe('Practice checkpoint A', () => {
     expect(document.querySelector('.question-table')?.getAttribute('data-question-id')).toBe(initialId)
     expect(screen.getByLabelText(messages['zh-TW'].hiddenCard)).toBeTruthy()
     expect(document.documentElement.lang).toBe('zh-TW')
-    expect(within(screen.getByLabelText(messages['zh-TW'].scenario)).getAllByRole('option').map((option) => option.getAttribute('value')))
-      .toEqual(['initial', 'continuing', 'split'])
+    expect(within(screen.getByLabelText(messages['zh-TW'].distribution)).getAllByRole('option').map((option) => option.getAttribute('value')))
+      .toEqual(['balanced', 'realistic'])
     fireEvent.click(within(screen.getByRole('group', { name: messages['zh-TW'].choices })).getAllByRole('button')[0])
     expect(screen.getByRole('status').textContent).toContain(messages['zh-TW'].referenceAnswer)
   })
 
-  it('offers only the three primary scenarios and keeps each operational', () => {
+  it('offers only Balanced/Realistic, applies distribution changes without stale feedback, and keeps each operational', () => {
     render(<App locale="en-US" />)
-    expect(within(screen.getByLabelText(copy.scenario)).getAllByRole('option').map((option) => option.getAttribute('value')))
-      .toEqual(['initial', 'continuing', 'split'])
+    expect(within(screen.getByLabelText(copy.distribution)).getAllByRole('option').map((option) => option.getAttribute('value')))
+      .toEqual(['balanced', 'realistic'])
+    expect((screen.getByLabelText(copy.distribution) as HTMLSelectElement).value).toBe('balanced')
+    expect(screen.getByText(copy.distributionDescriptions.balanced)).toBeTruthy()
     fireEvent.keyDown(window, { key: 'h', repeat: true })
     expect(screen.queryByRole('status')).toBeNull()
-    for (const scenario of ['initial', 'continuing', 'split'] as const) {
+    for (const mode of ['balanced', 'realistic'] as const) {
       fireEvent.change(screen.getByLabelText(copy.seed), { target: { value: 'golden' } })
-      fireEvent.change(screen.getByLabelText(copy.scenario), { target: { value: scenario } })
+      fireEvent.change(screen.getByLabelText(copy.distribution), { target: { value: mode } })
       fireEvent.click(screen.getByRole('button', { name: copy.apply }))
-      const current = expected(scenario, 'golden')
+      const current = expected(mode, 'golden')
+      expect(screen.queryByRole('status')).toBeNull()
+      expect(screen.getByText(copy.distributionDescriptions[mode])).toBeTruthy()
       expect(document.querySelector('.question-table')?.getAttribute('data-question-id')).toBe(current.question.id)
       const choices = screen.getByRole('group', { name: copy.choices })
       expect(within(choices).getAllByRole('button').length).toBe(current.question.selectableAnswers.length)
+      fireEvent.click(within(choices).getAllByRole('button')[0])
+      expect(screen.getByRole('status')).toBeTruthy()
     }
   })
 
@@ -130,7 +146,8 @@ describe('Practice checkpoint A', () => {
     fireEvent.click(screen.getByRole('button', { name: copy.retry }))
     expect(spy.mock.calls[0][0].questionIndex).toBe(0)
     expect(spy.mock.calls[1][0].questionIndex).toBe(0)
-    expect(spy.mock.calls.map(([input]) => input.maxAttempts)).toEqual([2048, 4096])
+    expect(spy.mock.calls[0][0].maxAttempts).toBe(2048)
+    expect(spy.mock.calls.slice(1).every(([input]) => input.maxAttempts === 4096)).toBe(true)
     expect(screen.queryByRole('alert')).toBeNull()
   })
 
@@ -147,6 +164,6 @@ describe('Practice checkpoint A', () => {
     fireEvent.change(screen.getByLabelText(copy.seed), { target: { value: 'golden' } })
     fireEvent.click(screen.getByRole('button', { name: copy.apply }))
     expect(screen.queryByRole('alert')).toBeNull()
-    expect(document.querySelector('.question-table')?.getAttribute('data-question-id')).toBe(expected('initial', 'golden').question.id)
+    expect(document.querySelector('.question-table')?.getAttribute('data-question-id')).toBe(expected('balanced', 'golden').question.id)
   })
 })

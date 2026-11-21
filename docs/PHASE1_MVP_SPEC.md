@@ -1,11 +1,27 @@
 # Blackjack Training Lab — Phase 1 MVP Specification
 
-- **Version:** 0.2 (review draft)
-- **Date:** 2026-11-20
-- **Owner:** User / product owner
-- **Status:** Draft for review; **not** approval to implement application code
+- **Version:** 0.3 (Alpha implementation alignment)
+- **Last synchronized:** 2026-11-20
+- **Owner:** Product owner
+- **Status:** Living Phase 1 specification. Phase 1C Alpha is implemented and live; future features are not automatically approved. See `DECISIONS.md` for explicit decisions and supersessions.
 - **Delivery target:** Responsive static web app, local-first
 - **Languages:** English (en-US) and Traditional Chinese (zh-TW)
+
+## Current implementation snapshot — 2026-11-20
+
+**Playable Alpha:** Practice immediate feedback; Speed Run 25/50/100 with final-only report and All/Incorrect/Correct filters; versioned deterministic Balanced/Realistic; English/Traditional Chinese; hand-total toggle; responsive UI. The maintainer opened the public GitHub Pages site on a phone, but full device acceptance is outstanding.
+
+**Amendments since the planning baseline:**
+
+- Main setup uses **Balanced / Realistic**, not standalone Initial / Continuing / Mixed choices.
+- Balanced targets near-equal Hard / Soft / Pair coverage and may internally mix Initial / Continuing / Split provenance with a provisional 80/15/5 policy.
+- Realistic samples naturally dealt **actionable initial hands only**; full continuing gameplay belongs to Casino Simulator.
+- Dedicated Insurance/Even Money UI prompts are deferred, while underlying engine support remains.
+- Session history is **in memory only**. Persistent history, Weakness Drill, richer metrics, PNG sharing, Challenge Link and Advanced Seed UX are planned, not playable.
+- Manual Seed input remains visible for Alpha testing. Agreed future UI: auto-generated ordinary seed and optional custom entry under Advanced Settings.
+- Only S17 and DAS have their stated approval statuses; other fixed casino defaults remain provisional.
+
+For exact distribution behavior see [TRAINING_DISTRIBUTIONS.md](TRAINING_DISTRIBUTIONS.md), and for planned vs delivered work see [BACKLOG.md](BACKLOG.md). This document covers the full Phase 1 *target*, not only the current Alpha.
 
 ## 1. Scope and intent
 
@@ -44,51 +60,52 @@ A question record must include the rule-profile version and legal-action context
 
 - Immediate Correct / Incorrect feedback after each decision, with correct action and concise explanation.
 - Manual Next button or equivalent keyboard action.
-- Strategy reference accessible without losing work.
+- **Planned:** a standalone strategy reference without losing work. Current Alpha gives concise explanations after answering.
 - Optional category filtering and adaptive question selection are proposed.
 
 ### 4.2 Speed Run
 
 - Default: **50 scored decision prompts**. Proposed quick options: 25 / 50 / 100.
 - Distribution selected before each run: **Balanced** or **Realistic**.
-- Hand state selected before each run: **Initial Only**, **Continuing Hands**, **Mixed**.
+- **Current:** no standalone hand-state selector. Balanced may mix legal Initial/Continuing/Split provenance; Realistic is Initial only.
 - No correctness feedback during the run; a report follows completion.
 - No mandatory time limit by default. Time each decision independently.
 - Hand total is toggleable, **hidden by default**; record this setting with results.
 - Provide progress and pause / resume / exit controls.
 
-### 4.3 Hand-state definitions
+### 4.3 Hand-state definitions (current Alpha)
 
-- **Initial:** a legal first-decision state with a two-card player hand, including pairs and soft totals. Usual legal choices: Hit / Stand / Double / Split, depending on rules.
-- **Continuing:** a reachable subsequent decision **after at least one Hit** with its action history retained. Generally Hit / Stand; do not offer Double or Split after a hit in the default profile.
-- **Mixed:** includes Initial and Continuing, with separate subtotals and one aggregate. Proposed starting mix: 50:50 before any Insurance prompts.
-- A later phase may add continuing turns **after split**, as those states have additional restrictions and are not necessarily synonymous with post-Hit hands.
+- **Initial:** an actionable first decision on the two-card player hand.
+- **Continuing:** reachable post-Hit decision with its prior action history and restricted legal actions.
+- **Split:** reachable split-derived decision following the relevant rule constraints.
+- **Mixed:** historical independent setup concept, **not** a current UI selector.
 
-A prompt equals **one scored decision**, not one complete blackjack round. Initial prompts do not have to play out to resolution in Phase 1.
+One prompt represents one scored decision, not a full round. Balanced may include Continuing/Split provenance internally; Realistic only presents actionable Initial decisions. Full round progression belongs in a later Casino Simulator. Breakdown analytics are planned for Phase 1D.
 
-## 5. Insurance and even money
+## 5. Insurance and Even Money — deferred standalone drills
 
-Insurance belongs in Phase 1 as an **explicit decision type** shown when dealer's upcard is Ace, prior to dealer peek. In a standard non-counting Basic Strategy evaluation, the expected correct insurance decision is **Decline**, regardless of the player's main-hand strategy. Count-based Insurance indices belong to later advanced phases.
+The current Practice and Speed Run UI **do not** display standalone Insurance or Even Money question types. Their generator and rule-engine support remains available for future Casino Simulator work. Ordinary Realistic initial-hand prompts internally resolve applicable pre-peek side-offer/peek stages before asking the main decision.
 
-Even Money for a player natural against dealer Ace is a closely related **proposed** edge case; whether to include it as a distinct prompt must be confirmed before implementation. It should not be mislabeled as an ordinary Hit/Stand decision.
-
-For reporting, insurance decisions should have their own category; they must not inflate Hard/Soft/Pair strategy mastery. **Proposed counting convention:** a 50-question run consists of 50 decision prompts in total, including any insurance decision prompts. Their proportion in Balanced mode is TBD and must be explicit. Realistic mode should use rule-consistent triggering frequencies.
+The original plan to count standalone Insurance prompts in a 50-question Speed Run has been **superseded**. Do not mix Insurance/Even Money events into Hard/Soft/Pair strategy accuracy or show them as Hit/Stand prompts. Non-counting Basic Strategy's internal Insurance recommendation is to decline.
 
 ## 6. Question-generation contracts
 
-### Balanced
+### Balanced — implemented (`training-distribution-v1`)
 
-- Use predetermined, versioned strata to cover strategy-relevant Hard, Soft, Pair, and decision-state categories.
-- For Mixed, sample both Initial and Continuing, and report each separately.
-- Avoid excessive repetition of identical decision situations within a run where possible.
-- Preserve a known distribution definition for cross-session comparison; store its version.
+- Every three questions target one Hard, one Soft and one exact-rank Pair; counts differ by at most one for completed 25/50/100 runs.
+- Seed affects category ordering/remainders. 10+J is Hard, not a pair. Pair classification takes precedence over Soft.
+- A provisional 60-question provenance plan targets 48 Initial / 9 Continuing / 3 Split, while ensuring legal reachability and category balance.
+- Bounded candidate sampling favors dealer-upcard and strategy-case diversity when feasible; explicit failure and a single extended recovery are provided.
+- The system does not weight difficult categories adaptively during benchmark Speed Runs.
 
-### Realistic
+### Realistic — implemented (`training-distribution-v1`)
 
-- Sample values from a finite six-deck composition, not uniformly from ranks or strategy cells.
-- Reachable Continuing states must be generated using a legal sequence of deals and preceding actions; reject impossible or already-terminated states.
-- A **fresh shoe per prompt** is an acceptable Phase 1 sampling model, clearly labeled. Persistent shoe depletion is deferred to card-counting simulation.
-- Never draw more instances of a rank or card than the shoe contains.
+- Sample from a fresh finite six-deck shoe each question without replacement within the round.
+- Handle dealer peek and pre-peek Insurance internally; exclude non-actionable Blackjack/terminal rounds.
+- Only naturally dealt actionable **initial two-card** decisions; no Hard/Soft/Pair quotas, Continuing/Split or forced strategy variety.
+- This is a *conditional initial-decision distribution*, not a full game or persistent shoe.
+
+See `TRAINING_DISTRIBUTIONS.md` for versions, math, seed/retry policy and limitations.
 
 ### Scoring and rule fidelity
 
@@ -102,11 +119,11 @@ For reporting, insurance decisions should have their own category; they must not
 
 ### Setup screen
 
-Select training type; question count; distribution; hand category; show/hide total; and read a compact rule summary. The interface language is separately changeable at any point.
+Current setup: Practice/Speed Run, distribution, Speed Run question count, visible custom Seed, language and hand-total toggle. No hand-category selector or rule editor. Future UX: auto-generate ordinary seeds and put optional custom input in Advanced Settings.
 
 ### Training screen
 
-Dealer upcard above, hidden card when applicable, player cards below, visible progress, accessible decision buttons. Keyboard shortcuts on desktop: H = Hit, S = Stand, D = Double, P = Split. Insurance stage uses explicit Take / Decline controls; avoid accidental shortcut collisions.
+Dealer upcard above, hidden card when applicable, player cards below, visible progress, accessible decision buttons. Keyboard shortcuts on desktop: H = Hit, S = Stand, D = Double, P = Split. Visible per-button shortcut badges were removed; keyboard functionality remains. No standalone Insurance/Even Money stage appears in the Alpha UI.
 
 - Ignore keyboard auto-repeat so one keypress cannot answer multiple consecutive prompts.
 - During pause or loss of focus, hide the cards and suspend the timer.
@@ -117,7 +134,7 @@ Dealer upcard above, hidden card when applicable, player cards below, visible pr
 
 ### Session report and review
 
-Show accuracy (correct / attempted), median time, P90 time, fastest time (descriptive only), and splits by Initial/Continuing and Hard/Soft/Pair/Insurance as applicable. Keep accuracy and speed separate. Review a prompt with cards, legal actions, user action, reference action, rule profile, timing, and concise explanation.
+**Current Alpha:** accuracy, counts, total/average answering time, final-only All/Incorrect/Correct review, selected/reference action and per-question response time. **Phase 1D plan:** median/P90, richer strategy-case and provenance breakdowns and persistent results. Standalone Insurance reporting is not part of the current trainer. Keep accuracy and speed separate.
 
 ### Weakness Drill
 
@@ -134,7 +151,7 @@ User starts deliberately from a session report or training menu. Draw from incor
 ## 9. Bilingual requirements
 
 - All interactive UI copy, messages, tooltips, errors, reviews, rule explanations, sharing text, and the image card template must exist in **English and Traditional Chinese**.
-- Default language can follow the browser locale; a manual switch overrides it and remains available.
+- The interface initializes from browser locale and can switch manually without regenerating the question; preference persistence across reload is **not implemented**.
 - Standard game action labels can keep their internationally recognizable English terms with Chinese descriptions.
 - Switching language must not regenerate the question sequence or reset a session.
 - QA must cover long translations, mixed Latin/CJK text, and narrow mobile layouts.
@@ -149,7 +166,7 @@ User starts deliberately from a session report or training menu. Draw from incor
 ## 11. Share as Image — confirmed Phase 1 feature
 
 - From a completed Speed Run report, generate one readable **PNG results card**.
-- Include optional user-supplied nickname; accuracy (with numerator/denominator), session length, median reaction time, fastest time, training distribution, hand-state mode, show/hide total, and relevant rule summary.
+- Include optional nickname; accurate numerator/denominator, session length, appropriate reaction-time statistics, distribution, actual hand/provenance context if meaningful, hand-total setting and rule summary. No obsolete standalone hand-state selection field.
 - Match current UI language; be readable on common phone displays and group chats.
 - Permit saving/download and, where the device supports it, invoking native share behavior; provide download fallback.
 - Never embed private stored history, email, account identifier, or invisible tracking data.
@@ -158,7 +175,7 @@ User starts deliberately from a session report or training menu. Draw from incor
 ## 12. Challenge Link — confirmed Phase 1 feature
 
 - Create a public-copyable URL usable on desktop and mobile, before or after a run.
-- Restore question count, distribution, hand-state mode, show/hide total, and the rule profile. The recipient can choose their interface language independently.
+- Restore question count, distribution, hand-total setting, rule profile and compatible generator/distribution versions; no obsolete hand-state selector. The recipient can choose their interface language independently.
 - **Proposed preferred challenge flavor:** Same Seed, which reproduces the same ordered prompt sequence for fairer comparisons, including initial/continuing/insurance cases where applicable.
 - Determinism requires a stable seeded pseudorandom generator, question-generator version, rule-profile version, and deterministic branch-free question selection, or an equivalent serialized task ID set. Store all necessary version fields in the link.
 - Challenge links must validate input, reject unsupported versions gracefully, avoid secrets or personal results in parameters, and not allow unsafe arbitrary data loading.
@@ -167,9 +184,8 @@ User starts deliberately from a session report or training menu. Draw from incor
 
 ## 13. Storage, privacy, and deployment
 
-- Browser-local persistence, no accounts; data scoped to browser/device.
-- Store per-prompt results and session configuration/version, plus history summaries.
-- Provide a clear reset-history action with confirmation. Export/import backup can be Phase 1.1 unless separately approved.
+- **Current Alpha:** sessions and settings are only in memory; reloading resets them. No accounts or backend.
+- **Phase 1D target:** versioned local session/result persistence, safe migration, history summaries and confirmation-gated clear-history. Export/import may be deferred.
 - Client-only app, suitable for static hosting such as GitHub Pages after review. Repository can be private during planning; publication/hosting will be arranged separately.
 - Do not store secrets or private API keys in the client application.
 
@@ -180,34 +196,31 @@ User starts deliberately from a session report or training menu. Draw from incor
 - Persistent shoe through a whole table session, Hi-Lo running/true counts, deck estimation, betting counts, and index deviations.
 - Arbitrary rule-profile editor and composition-dependent optimal-play engine.
 
-## 15. Acceptance criteria
+## 15. Acceptance criteria and status
 
-1. 50-prompt Balanced Speed Run completes with no intermediate answer reveal and produces a report.
-2. Practice reports immediate feedback and explanations; Speed Run does not.
-3. Initial / Continuing / Mixed generate only reachable, correctly labeled legal decision states; category metrics remain separate.
-4. Balanced and Realistic honor their documented, versioned distributions.
-5. Rule-profile reference cases pass independent strategy checks, including no Double after Hit.
-6. Dealer Ace triggers Insurance correctly, with separate answer choices and separate reporting.
-7. A visible/hidden hand-total toggle works, defaults to hidden, and is saved with session results.
-8. Median, P90, accuracy, and per-category breakdowns agree with saved prompt records.
-9. Pause / loss of focus does not inflate timed response duration or expose cards.
-10. Manual Review and user-initiated Weakness Drill work, with independent scores.
-11. English and zh-TW all flow end-to-end, including feedback, empty/error states, sharing, and accessible labels.
-12. Mobile portrait layout works without horizontal overflow; touch and keyboard cannot double-submit.
-13. PNG results card matches the actual saved result and is usable on mobile/desktop with fallback download.
-14. Challenge URL reopens with the same settings on a separate device; Same Seed challenge reproduces a byte-for-byte equivalent ordered question descriptor list when generator versions match.
-15. Invalid / stale challenge URL fails safely with a friendly explanation and does not erase local history.
-16. After reload, finished session history is still accessible (assuming site storage has not been cleared).
-17. No credential, private record, or uncontrolled local history is included in a shareable challenge URL/image.
+| Gate | Alpha status |
+| --- | --- |
+| 50-question Balanced Speed Run, final-only scoring | Implemented and tested |
+| Practice immediate feedback and explanations | Implemented and tested |
+| Reachable Initial/Continuing/Split provenance and legal actions | Implemented in generator/distribution; no separate mode selector |
+| Deterministic versioned Balanced / Realistic | Implemented and tested |
+| Independent reference strategy and fallback correctness | Implemented and tested |
+| Dedicated Insurance prompt and reporting | Superseded; deferred to Casino Simulator |
+| Hand-total toggle, hidden by default | Implemented; not persisted across reload |
+| Accuracy and completed-run answer review | Implemented; median/P90, persistence and richer breakdowns pending |
+| Pause/resume timing and cards hidden | Implemented; full real-device background acceptance pending |
+| Manual Review and Weakness Drill | End-of-run review implemented; independent Weakness Drill pending |
+| en-US / zh-TW and mobile portrait UI | Implemented; iOS Safari/Android real-device acceptance pending |
+| PNG result card and Challenge Link | Pending Phase 1E |
+| Session history across reload and reset-history confirmation | Pending Phase 1D |
+| No private history in share outputs | Future release acceptance |
 
-## 16. Pre-implementation open decisions
+Reported checkpoint evidence: 412 tests at Phase 1C.4; 21 relevant UI tests, build/lint and desktop/mobile Chromium smoke checks at deployment preparation; maintainer opened the public site on a phone. See `TEST_PLAN.md`. A playable Alpha is **not** proof that every Phase 1 gate has passed.
 
-- Final values for still-proposed table rules; coverage and legal-action constraints for split aces.
-- Exact Balanced strata, Realistic sample mechanics, and Insurance prompt quota / denominator.
-- Distinction and UI for Even Money.
-- Default Practice distribution and Mixed ratio.
-- Share card layout, optional nickname and image dimensions.
-- Same Seed as default vs optional Same Settings.
-- Framework choice, deployment workflow, and explicit supported browser versions.
+## 16. Open decisions for future work
 
-No application coding should start until the product owner accepts these open decisions or explicitly delegates sensible defaults.
+**Resolved for current Alpha:** React/Vite and GitHub Pages; Balanced prioritizes Hard/Soft/Pair coverage; Realistic uses natural actionable initial hands; internal Continuing/Split only where the Balanced policy permits; standalone Insurance/Even Money deferred; Speed Run default Balanced/50; hand total hidden by default; Seed retained as deterministic infrastructure.
+
+**Still to design or verify:** final approval of provisional casino rules if new rule profiles are introduced; local history schema/version migrations and Weakness Drill sampling; richer reaction-time and decision-case analytics; PNG design; safe Same-Seed Challenge Link and potential Same Settings option; Advanced Seed UI and auto-generation; complete real-device and accessibility/privacy QA.
+
+This document's future-facing requirements do not constitute product-owner approval to implement unresolved changes.

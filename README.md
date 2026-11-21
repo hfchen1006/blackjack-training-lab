@@ -2,7 +2,7 @@
 
 A mobile-friendly, bilingual (English / Traditional Chinese) Blackjack decision-training web app.
 
-**Status:** Phase 1C Alpha application implemented. GitHub Pages deployment preparation is available; a live deployment has not been confirmed.
+**Status (2026-11-20):** Playable Phase 1C Alpha, publicly available on GitHub Pages. The maintainer confirmed opening the site on a phone; this is **not** the completed Phase 1 release. Live source branch: `feature/phase1c-training-system`.
 
 ## Alpha Demo
 
@@ -12,49 +12,21 @@ answer review. Both offer seeded Balanced and Realistic distributions, English
 and Traditional Chinese, and optional hand totals (hidden by default). Balanced
 is the default; Speed Run defaults to 50 questions.
 
-### Enable and publish with GitHub Pages
+### Live Alpha and deployment maintenance
 
-These are manual steps after independent review; preparation does not publish
-the site or change repository settings.
+**Live Alpha:** https://hfchen1006.github.io/blackjack-training-lab/
 
-1. In `hfchen1006/blackjack-training-lab`, open **Settings → Pages → Build and
-   deployment → Source** and select **GitHub Actions**. Do not select a publishing
-   branch or generate an additional workflow. Pages must be available under the
-   repository's current visibility and plan; if unavailable, resolve that with
-   the owner without changing visibility as part of this task.
-2. In **Settings → Actions → General**, ensure Actions and the official `actions/*`
-   used by the workflow are permitted by repository/organization policy. No PAT,
-   custom secret, or repository-wide write-token setting is required.
-3. In **Settings → Environments → github-pages**, create the environment if
-   necessary. Under **Deployment branches and tags**, choose **Selected branches
-   and tags** and add a **Branch** rule for exactly
-   `feature/phase1c-training-system`. Preserve any required reviewers; approve a
-   deployment when prompted. A restriction to `main` would block this Alpha.
-4. After review, the maintainer must commit the approved local changes and push
-   **only** `feature/phase1c-training-system`. The workflow
-   `.github/workflows/deploy-alpha-pages.yml` runs on pushes to that branch only;
-   no merge into `main`, manual-dispatch workflow, or `gh-pages` branch is needed.
-5. Open **Actions → Deploy Alpha Demo to GitHub Pages**, selecting the feature
-   branch if needed. Verify both **build** and **deploy** jobs succeed. Build runs
-   Node.js 24, `npm ci` against `app/package-lock.json`, tests, lint and the
-   production build in `app/`; only `app/dist` is uploaded. Deploy uses the
-   built-in GitHub token with Pages/OIDC permissions, not external credentials.
-6. The expected URL is
-   **https://hfchen1006.github.io/blackjack-training-lab/** (without a custom
-   domain). Verify the actual URL in the successful run's **github-pages**
-   environment link and **Settings → Pages → Visit site**. Then smoke-test that
-   live URL separately; local verification does not confirm GitHub deployment.
+The maintainer confirmed opening this site on a phone on 2026-11-20. That establishes access on one real device, **not** completion of the full iOS Safari / Android Chrome acceptance checklist.
 
-If a job fails, open its first failed step and logs. Install/test/lint/build
-errors belong to **build**. A missing Pages site requires step 1; deployment
-branch protection requires step 3; a waiting job may need reviewer approval.
-After fixing settings, use the failed run's **Re-run failed jobs** (or **Re-run
-all jobs** if its short-lived artifact expired). After a code correction, push
-the reviewed correction to the same feature branch. Workflow discovery in the
-sidebar is not required for the initial push-triggered run.
+Deployment is controlled by [`.github/workflows/deploy-alpha-pages.yml`](.github/workflows/deploy-alpha-pages.yml):
 
-This follows [GitHub's custom Pages workflow setup](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
-and [deployment environment rules](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments).
+1. **Settings → Pages → Build and deployment → Source** is **GitHub Actions**.
+2. The `github-pages` environment allows `feature/phase1c-training-system` for deployment.
+3. A push to that branch runs tests, lint and production build under `app/` with Node.js 24, then deploys `app/dist` through official GitHub Pages actions.
+4. See **Actions → Deploy Alpha Demo to GitHub Pages** for build/deploy logs and **Settings → Pages → Visit site** for the live URL. Diagnose the earliest failed step if a future run fails.
+5. Develop unfinished features on separate branches. Only merge reviewed changes into the Alpha branch; doing so triggers a new deployment even for documentation-only commits.
+
+The repository is public. Do not commit private data, tokens, credentials or `.env` files. The Alpha is a static web app without accounts or a backend.
 
 ### Local production and mobile checks
 
@@ -77,7 +49,7 @@ favicon returned HTTP 200 under the repository subpath. Desktop Chromium and
 320/375/390px touch emulation passed, including six completed 25-question runs
 across both distributions/languages, pause/resume, scoring and review filters.
 Final asset/reload checks reported no browser errors or horizontal overflow.
-The GitHub workflow, live site and real-phone/Safari behavior remain unverified.
+The live Pages URL was opened on a phone by the maintainer. Comprehensive iOS Safari/Android QA, background/lock behavior and later workflow runs still require verification.
 
 On a real phone, test the confirmed live URL in iOS Safari and Android Chrome:
 
@@ -112,20 +84,26 @@ plan, not a claim that all Phase 1 features are playable.
 
 Train Basic Strategy accuracy and reaction time, identify weak decisions, and share friendly speed challenges with other players. Future phases may add Hi-Lo card counting, true-count conversion, index deviations, and fuller table simulation.
 
-## Phase 1 features
+## Feature status
 
-- Practice with immediate strategy feedback.
-- Speed Run with end-of-session feedback, default 50 decision prompts.
-- Balanced or Realistic question distribution.
-- Initial Only, Continuing Hands, and Mixed categories; independent reporting.
-- Optional hand-total display, hidden by default.
-- Insurance decisions; even-money handling proposed for relevant hands.
-- Session report, manual review, and Weakness Drill.
-- Responsive mobile/desktop experience.
-- English and Traditional Chinese across all user-facing text.
-- Share as Image: one shareable PNG results card.
-- Challenge Link: link-based, repeatable challenge configuration and deterministic questions where enabled.
-- Local-first session data; no account or backend required for the MVP.
+**Playable now — Phase 1C Alpha:**
+
+- Practice: one-answer lock, immediate feedback, correct action and concise explanation.
+- Speed Run: 25/50/100 questions (default 50), final-only scoring, pause/resume, response timing, All/Incorrect/Correct review filters and Perfect Run messaging.
+- Deterministic seeded Balanced / Realistic distribution (Balanced default). [Implementation policy](docs/TRAINING_DISTRIBUTIONS.md).
+- Balanced includes legal Initial/Continuing/Split provenance internally; Realistic shows actionable Initial hands only. **No separate hand-state selector**.
+- English and Traditional Chinese UI, accessible touch/keyboard controls, hidden-by-default player hand total.
+- Fixed six-deck S17/DAS baseline; other table settings remain provisional.
+
+**Planned within Phase 1:**
+
+- **Phase 1D:** persisted local session history, richer performance/decision-situation analysis, full Manual Review and independent Weakness Drill.
+- **Phase 1E:** PNG result sharing, versioned Same-Seed Challenge Link, automatically generated Seed with optional custom input under Advanced Settings, focused UI/UX improvements.
+- **Release QA:** complete iOS Safari/Android and accessibility testing, privacy and challenge validation, final release acceptance.
+
+**Deferred:** dedicated Insurance/Even Money training UI, full casino table progression, card counting and index deviations. Insurance/Even Money domain logic still exists for future use.
+
+The list of [planned milestones](docs/BACKLOG.md) is distinct from what is playable today.
 
 ## Default rules (partly provisional)
 
@@ -136,7 +114,8 @@ Six decks, dealer stands on soft 17 (S17), double after split allowed (DAS), no 
 - [Phase 1 MVP Specification](docs/PHASE1_MVP_SPEC.md)
 - [Requirements & decision log](docs/DECISIONS.md)
 - [Development backlog](docs/BACKLOG.md)
-- [Proposed acceptance tests](docs/TEST_PLAN.md)
+- [Acceptance tests and remaining QA](docs/TEST_PLAN.md)
+- [Implemented distribution policy](docs/TRAINING_DISTRIBUTIONS.md)
 
 ## Development setup
 
@@ -148,7 +127,7 @@ implemented scope; requirements documents retain the broader plan.
 
 ## Sharing and privacy
 
-A challenge link should never contain browser history, private notes, or other personal data. A result image can optionally show a user-entered nickname. Without a server, results cannot be verified against tampering; this feature is intended for friendly challenges, not a trusted leaderboard.
+The current Alpha does not persist completed sessions, create challenge links, or generate result images. Future shareable URLs and PNG cards must exclude private local history, emails, private notes and tracking data. With no backend, results cannot be authenticated for a trusted leaderboard.
 
 ## Disclaimer
 
